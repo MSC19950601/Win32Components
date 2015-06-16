@@ -8,6 +8,9 @@ MainWindow::MainWindow()
 	InitializeToolbar();
 	SetWindowStyle(GetWindowStyle() | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	toolbar->Show();
+	auto size = toolbar->GetTotalSize();
+	SetClientSizeWithPhysic(size.first, size.second);
+	SetFixed(true);
 }
 
 

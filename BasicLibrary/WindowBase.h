@@ -80,16 +80,28 @@ namespace Yupei
 			return static_cast<U>(static_cast<float>(y) * dpiY / 96.f);
 		}
 		
-		void SetWindowSize(UINT width, UINT height);
-		void SetClientSize(UINT width, UINT height);
-		void SetFixedSize(UINT width, UINT height);
+		void SetWindowSizeWithPhysic(UINT width, UINT height);
+		void SetClientSizeWithPhysic(UINT width, UINT height);
+		void SetWindowSizeWithDip(UINT width, UINT height)
+		{
+			SetWindowSizeWithPhysic(
+				DipsToPixelsX<UINT>(width),
+				DipsToPixelsY<UINT>(height));
+		}
+		void SetClientSizeWithDip(UINT width, UINT height)
+		{
+			SetClientSizeWithPhysic(
+				DipsToPixelsX<UINT>(width),
+				DipsToPixelsY<UINT>(height));
+		}
+		
 		RECT GetWindowPos() const;
 		void Show();
 
 		virtual void OnResize(UINT width, UINT height) {}
 		virtual void OnRender() {}
 
-		BOOL MoveWindowTo(
+		BOOL MoveWindowToWithDip(
 			int x,
 			int y,
 			int width,
@@ -102,6 +114,33 @@ namespace Yupei
 				DipsToPixelsX<int>(width),
 				DipsToPixelsY<int>(height),
 				TRUE);
+		}
+
+		BOOL MoveWindowToWithPhysics(
+			int x,
+			int y,
+			int width,
+			int height,
+			BOOL isRepaint = TRUE)
+		{
+			return ::MoveWindow(windowHandle,
+				x,
+				y,
+				width,
+				height,
+				TRUE);
+		}
+
+		void SetFixed(bool isFixed = true)
+		{
+			if (isFixed)
+			{
+				SetWindowStyle(GetWindowStyle() & ~WS_THICKFRAME);
+			}
+			else
+			{
+				SetWindowStyle(GetWindowStyle() | WS_THICKFRAME);
+			}
 		}
 	protected:
 		HWND windowHandle = nullptr;

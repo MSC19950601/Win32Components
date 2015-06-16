@@ -14,12 +14,12 @@ namespace Yupei
 	{
 		windowHandle = Create(title);
 	}
-	void WindowBase::SetWindowSize(UINT width, UINT height)
+	void WindowBase::SetWindowSizeWithPhysic(UINT width, UINT height)
 	{
 		auto rect = GetWindowPos();
-		MoveWindowTo(rect.left, rect.top, rect.left+static_cast<int>(width), rect.top+static_cast<int>(height));
+		MoveWindowToWithPhysics(rect.left, rect.top, static_cast<int>(width), static_cast<int>(height));
 	}
-	void WindowBase::SetClientSize(UINT width, UINT height)
+	void WindowBase::SetClientSizeWithPhysic(UINT width, UINT height)
 	{
 		auto rect = GetWindowPos();
 		if (GetWindowStyle() == WS_OVERLAPPED)
@@ -28,20 +28,15 @@ namespace Yupei
 			auto borderWidth = ::GetSystemMetrics(SM_CXBORDER);
 			width += static_cast<UINT>(borderWidth) << 1;
 			height += static_cast<UINT>(captionHeight);
-			MoveWindowTo(rect.left, rect.top, rect.left + width, rect.top + height);
+			MoveWindowToWithPhysics(rect.left, rect.top, width, height);
 		}
 		else
 		{
 			RECT target = { 0,0,static_cast<LONG>(width),static_cast<LONG>(height) };
 			//TRUE or FALSE ?
 			::AdjustWindowRect(&target, GetWindowStyle(), FALSE);
-			MoveWindowTo(rect.left, rect.top, rect.left+static_cast<int>(target.right - target.left), rect.top+static_cast<int>(target.bottom - target.top));
+			MoveWindowToWithPhysics(rect.left, rect.top, static_cast<int>(target.right - target.left), static_cast<int>(target.bottom - target.top));
 		}
-	}
-	void WindowBase::SetFixedSize(UINT width, UINT height)
-	{
-		SetWindowSize(width, height);
-		SetWindowStyle(WS_OVERLAPPED | WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
 	}
 	RECT WindowBase::GetWindowPos() const
 	{

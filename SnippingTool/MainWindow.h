@@ -11,7 +11,6 @@ public:
 
 	void OnResize(UINT width, UINT height) override;
 
-	void CreateToolBar();
 
 private:
 	
@@ -32,11 +31,11 @@ private:
 		SettingsIndex
 	};
 
-	void AddTooBarBitmap(TBADDBITMAP& tb,WORD resourceID);
-	void CompleteImageList();
 	void InitializeToolbar();
 	
 	HMENU mainMenuHandle = nullptr;
 	Toolbar* toolbar;
+
+	int toolbarCommands[3] = { NewCommand,CancelCommand,SettingsCommand };
 };				 
 
