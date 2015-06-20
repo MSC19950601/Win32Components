@@ -1,38 +1,42 @@
 #pragma once
 
-#include "Common.h"
-#include "WindowBase.h"
-#include "IndependentResource.h"
+#include <Windows.h>
+#include "RoutedEvent.h"
 
 namespace Yupei
 {
-	class Application 
+	class WindowBase;
+	class Application
 	{
 	public:
-		
-		WPARAM Run()
+		static void Suspend()
 		{
-			mainWindow->Show();
-			return mainWindow->Run();
+			::SuspendThread(::GetCurrentThread());
+		}
+		static void Resume()
+		{
+			::ResumeThread(::GetCurrentThread());
+		}
+		static void Restart()
+		{
+
+		}
+		static void ExitApplication()
+		{
+			::PostQuitMessage(0);
 		}
 		static Application& GetInstance()
 		{
 			static Application mainApp;
 			return mainApp;
 		}
-		void SetMainWindow(WindowBase* window) noexcept
-		{
-			mainWindow = window;
-			mainWindow->SetResources(&resources);
-		}
-		~Application();
+		Event<RoutedEventArgs> ApplicationExit;
+		Event<RoutedEventArgs> ApplicationLoaded;
+		static WPARAM Run(WindowBase* window);
 	private:
-		Application();
-		WindowBase* mainWindow = nullptr;
-		DeviceIndependentResource resources;
-
-		void InitializeCommonControls();
-		void InitializeCom();
-		void InitializeResources();
+		Application() = default;
+		Application(const Application&) = delete;
 	};
+
+
 }

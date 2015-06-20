@@ -1,40 +1,32 @@
 #include "Application.h"
+#include "WindowBase.h"
+#include <memory>
 
 namespace Yupei
 {
-	Application::~Application()
+	WPARAM Application::Run(WindowBase * window)
 	{
-		::CoUninitialize();
-	}
-	Application::Application()
-	{
-		InitializeResources();
-		InitializeCommonControls();
-		InitializeCom();
-	}
-	void Application::InitializeCommonControls()
-	{
-		INITCOMMONCONTROLSEX initStruct = { sizeof(INITCOMMONCONTROLSEX),
-			ICC_WIN95_CLASSES };
-		::InitCommonControlsEx(&initStruct);
-	}
-	void Application::InitializeCom()
-	{
-		::CoInitialize(nullptr);
-	}
-	void Application::InitializeResources()
-	{
-		::D2D1CreateFactory(
-			D2D1_FACTORY_TYPE_SINGLE_THREADED,
-			&resources.D2DFactory);
-		::DWriteCreateFactory(
-			DWRITE_FACTORY_TYPE_SHARED,
-			__uuidof(IDWriteFactory),
-			reinterpret_cast<IUnknown**>(&resources.DWriteFactory));
-		::CoCreateInstance(
-			CLSID_WICImagingFactory,
-			nullptr,
-			CLSCTX_INPROC_SERVER,
-			IID_PPV_ARGS(&resources.WicImagingFactory));
+		auto& app = Application::GetInstance();
+		if (window != nullptr) window->Show();
+		auto tempArgs = std::make_unique<RoutedEventArgs>();
+		RoutedInvoke(app.ApplicationLoaded, nullptr, tempArgs.get());
+		MSG messages;
+		while (true)
+		{
+			if (::PeekMessage(&messages, nullptr, 0, 0, PM_REMOVE))
+			{
+				if (messages.message == WM_QUIT) break;
+				::TranslateMessage(&messages);
+				::DispatchMessage(&messages);
+			}
+			else
+			{
+				if(window != nullptr)
+					window->OnRender();
+			}
+		}
+		tempArgs->Reset();
+		RoutedInvoke(app.ApplicationExit, nullptr, tempArgs.get());
+		return messages.wParam;
 	}
 }

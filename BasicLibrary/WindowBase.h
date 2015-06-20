@@ -1,10 +1,13 @@
 #pragma once
 
-#include "Common.h"
-
+#include "RoutedEvent.h"
+#include "ResourceManager.h"
+#include <Windows.h>
+#include <memory>
 
 namespace Yupei
 {
+
 	extern LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam,LPARAM lParam);
 
 	struct WindowClass
@@ -14,15 +17,16 @@ namespace Yupei
 		WindowClass();
 
 		WNDCLASSEX windowClass;
+		
 	};
 	
-	struct DeviceIndependentResource;
+	struct GraphicsResource;
 
 	class WindowBase
 	{
 	public:
 
-		friend class Application;
+		friend class ApplicationService;
 
 		friend LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -142,33 +146,73 @@ namespace Yupei
 				SetWindowStyle(GetWindowStyle() | WS_THICKFRAME);
 			}
 		}
+
+		void Close()
+		{
+			::PostMessage(windowHandle, WM_CLOSE, 0, 0);
+		}
+
+		auto GetD2DFactory()
+		{
+			return resources.GetGraphicsResource().D2DFactory;
+		}
+
+		auto GetDWriteFactory()
+		{
+			return resources.GetGraphicsResource().DWriteFactory;
+		}
+
+		auto GetWicImagingFactory()
+		{
+			return resources.GetGraphicsResource().WicImagingFactory;
+		}
+
+		//Events
+
+		Event<CreateArgs> WinCreate;
+		Event<MouseArgs> MouseDown;
+		Event<MouseArgs> MouseUp;
 	protected:
 		HWND windowHandle = nullptr;
 
-		CComPtr<ID2D1Factory> d2dFactory;
-		CComPtr<IDWriteFactory> dWriteFactory;
-		CComPtr<IWICImagingFactory> wicImagingFactory;
+		PublicResource resources;
 
 		float dpiX, dpiY;
 
 		ID2D1HwndRenderTarget* renderTarget = nullptr;
-
+		virtual void OnCreate(void* sender, CreateArgs* args)
+		{
+			RoutedInvoke(WinCreate, sender, args);
+		}
 	private:
-		void SetResources(const DeviceIndependentResource* _resources) noexcept;
+		struct BasicEventArguments
+		{
+			std::unique_ptr<CreateArgs> CreateArguments = std::make_unique<CreateArgs>();
 
-		WPARAM Run();
+		};
+		BasicEventArguments eventArguments;
+		void SetResources(const PublicResource& _resources) noexcept;
+		void ProcessCreate(HWND _windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
+		{
+			// do nothing
+			OnCreate(this, eventArguments.CreateArguments.get());
+		}
+		
 		HWND Create(const std::wstring& title);
 		void Initialize();
 		void InitializeRenderTarget()
 		{
-			d2dFactory->CreateHwndRenderTarget(
+			GetD2DFactory()->CreateHwndRenderTarget(
 				D2D1::RenderTargetProperties(),
 				D2D1::HwndRenderTargetProperties(windowHandle),
 				&renderTarget);
 		}
 		void InitializeDpi()
 		{
-			d2dFactory->GetDesktopDpi(&dpiX, &dpiY);
+			HDC hdc = GetDC(nullptr);
+			dpiX = static_cast<float>(GetDeviceCaps(hdc, LOGPIXELSX));
+			dpiY = static_cast<float>(GetDeviceCaps(hdc, LOGPIXELSY)) ;
+			ReleaseDC(nullptr, hdc);
 		}
 		
 	};

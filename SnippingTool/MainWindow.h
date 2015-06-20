@@ -1,8 +1,9 @@
 #pragma once
 
-#include "..\BasicLibrary\Yupei.h"
-#include "ToolBar.h"
 #include "resource.h"
+#include "..\BasicLibrary\WindowBase.h"
+
+class Toolbar;
 
 class MainWindow : public Yupei::WindowBase
 {
@@ -18,13 +19,13 @@ private:
 	static const int MainWindowWidth = 316;
 	static const int MainWindowHeight = 125;
 	static const int ToolBarButtonCount = 3;
-	enum ToolBarCommands
+	enum ToolbarCommands
 	{
 		NewCommand = 10000,
 		CancelCommand = 10001,
 		SettingsCommand = 10002
 	};
-	enum ToolBarButtonsIndex
+	enum ToolbarButtonsIndex
 	{
 		NewIndex,
 		CancelIndex,
@@ -34,7 +35,7 @@ private:
 	void InitializeToolbar();
 	
 	HMENU mainMenuHandle = nullptr;
-	Toolbar* toolbar;
+	std::shared_ptr<Toolbar> toolbar;
 
 	int toolbarCommands[3] = { NewCommand,CancelCommand,SettingsCommand };
 };				 

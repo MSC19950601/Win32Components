@@ -1,6 +1,9 @@
 #include "WindowBase.h"
 #include "IndependentResource.h"
 #include "Helper.h"
+#include "Application.h"
+#include "NativeWindow.h"
+#include <cassert>
 
 
 namespace Yupei
@@ -11,8 +14,10 @@ namespace Yupei
 		
 	}
 	WindowBase::WindowBase(const std::wstring & title)
+		:resources(PublicResource::GetInstance())
 	{
 		windowHandle = Create(title);
+		Initialize();
 	}
 	void WindowBase::SetWindowSizeWithPhysic(UINT width, UINT height)
 	{
@@ -49,32 +54,12 @@ namespace Yupei
 		::ShowWindow(windowHandle, SW_SHOWNORMAL);
 		::UpdateWindow(windowHandle);
 	}
-	void WindowBase::SetResources(const DeviceIndependentResource * _resources) noexcept
+	void WindowBase::SetResources(const PublicResource& _resources) noexcept
 	{
-		d2dFactory = _resources->D2DFactory;
-		dWriteFactory = _resources->DWriteFactory;
-		wicImagingFactory = _resources->WicImagingFactory;
+		resources = _resources;
 		Initialize();
 	}
 
-	WPARAM WindowBase::Run()
-	{
-		MSG messages;
-		while (true)
-		{
-			if (::PeekMessage(&messages,nullptr,0,0,PM_REMOVE))
-			{
-				if (messages.message == WM_QUIT) break;
-				::TranslateMessage(&messages);
-				::DispatchMessage(&messages);
-			}
-			else
-			{
-				OnRender();
-			}
-		}
-		return messages.wParam;
-	}
 	HWND WindowBase::Create(const std::wstring& title)
 	{
 		static WindowClass wndClass; // register window class once
@@ -110,6 +95,7 @@ namespace Yupei
 				GWLP_USERDATA,
 				PtrToUlong(mainWindow));
 			wasHandled = false;
+			mainWindow->ProcessMessage(windowHandle, message, wParam, lParam, wasHandled, result);
 		}
 		else
 		{
@@ -121,6 +107,9 @@ namespace Yupei
 			{
 				switch (message)
 				{
+				case WM_CREATE:
+					mainWindow->ProcessCreate(windowHandle, message, wParam, lParam);
+					break;
 				case WM_PAINT:
 				{
 					auto renderTarget = mainWindow->renderTarget;
@@ -150,6 +139,28 @@ namespace Yupei
 				case WM_DESTROY:
 					::PostQuitMessage(0);
 					break;
+				case WM_COMMAND:
+				{
+					switch (HIWORD(wParam))
+					{
+					case 0:
+						// for Menu
+						break;
+					case 1:
+						// for Accelerator
+						break;
+					default:
+						NativeWindow::idToWindowMap[LOWORD(wParam)]->ProcessMessage(wParam, lParam);
+						break;
+					}
+				}
+				break;
+				case WM_NOTIFY:
+				{
+					auto pNmhdr = reinterpret_cast<NMHDR*>(lParam);
+					NativeWindow::idToWindowMap[pNmhdr->idFrom]->ProcessMessage(wParam, lParam);
+				}
+				break;
 				default:
 					break;
 				}

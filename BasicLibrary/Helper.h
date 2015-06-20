@@ -1,6 +1,5 @@
 #pragma once
-
-#include "Common.h"
+#include <Windows.h>
 
 namespace Yupei
 {
@@ -13,5 +12,8 @@ namespace Yupei
 		rect.bottom += static_cast<LONG>(y);
 	}
 
-
+	inline HINSTANCE GetApplicationInstance() noexcept
+	{
+		return ::GetModuleHandle(nullptr);
+	}
 }

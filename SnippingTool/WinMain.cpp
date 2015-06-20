@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "..\BasicLibrary\Application.h"
 
 int WINAPI WinMain(
 	HINSTANCE  hInstance ,
@@ -7,8 +8,6 @@ int WINAPI WinMain(
 	int /* nCmdShow */
 	)
 {
-	auto app = Yupei::Application::GetInstance();
 	auto mainWindow = std::make_unique<MainWindow>();
-	app.SetMainWindow(mainWindow.get());
-	return app.Run();
+	return Yupei::Application::Run(mainWindow.get());
 }

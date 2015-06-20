@@ -72,13 +72,18 @@
   <ItemGroup>
     <ClInclude Include="Application.h" />
     <ClInclude Include="Common.h" />
+    <ClInclude Include="Event.h" />
     <ClInclude Include="Helper.h" />
-    <ClInclude Include="IndependentResource.h" />
+    <ClInclude Include="NativeWindow.h" />
+    <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="RoutedEvent.h" />
     <ClInclude Include="WindowBase.h" />
     <ClInclude Include="Yupei.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="NativeWindow.cpp" />
+    <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="WindowBase.cpp" />
   </ItemGroup>
   <ItemGroup>
