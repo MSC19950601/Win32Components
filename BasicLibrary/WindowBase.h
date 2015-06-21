@@ -139,7 +139,7 @@ namespace Yupei
 		{
 			if (isFixed)
 			{
-				SetWindowStyle(GetWindowStyle() & ~WS_THICKFRAME);
+				SetWindowStyle(GetWindowStyle() & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX);
 			}
 			else
 			{

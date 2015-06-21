@@ -74,6 +74,7 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="Helper.h" />
+    <ClInclude Include="Menu.h" />
     <ClInclude Include="NativeWindow.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="RoutedEvent.h" />
@@ -82,6 +83,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp" />
+    <ClCompile Include="Menu.cpp" />
     <ClCompile Include="NativeWindow.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="WindowBase.cpp" />

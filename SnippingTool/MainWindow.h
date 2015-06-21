@@ -2,16 +2,19 @@
 
 #include "resource.h"
 #include "..\BasicLibrary\WindowBase.h"
+#include "..\BasicLibrary\Menu.h"
 
 class Toolbar;
 
-class MainWindow : public Yupei::WindowBase
+
+class MainWindow : public Yupei::WindowBase,public std::enable_shared_from_this<MainWindow>
 {
 public:
 	MainWindow();
 
 	void OnResize(UINT width, UINT height) override;
 
+	void Initialize();
 
 private:
 	
@@ -33,9 +36,12 @@ private:
 	};
 
 	void InitializeToolbar();
+	void InitializeContextMenu();
 	
 	HMENU mainMenuHandle = nullptr;
+
 	std::shared_ptr<Toolbar> toolbar;
+	std::shared_ptr<Yupei::Menu> snippingMenu;
 
 	int toolbarCommands[3] = { NewCommand,CancelCommand,SettingsCommand };
 };				 

@@ -1,4 +1,5 @@
 #include "ToolBar.h"
+#include "..\BasicLibrary\Menu.h"
 
 Toolbar::Toolbar(Yupei::WindowBase * parent, DWORD styles, DWORD exStyles)
 	:NativeWindow(
@@ -57,6 +58,18 @@ void Toolbar::AddImage(INT_PTR index, const COLORREF& colorFrom)
 	DeleteObject(hbm);
 }
 
+void Toolbar::SetDropdownMenu(UINT id, std::shared_ptr<Yupei::Menu> menu)
+{
+	Dropdown[id].AddHandler(
+		[menu = std::move(menu)](void* sender, ToolbarMouseArgs* args)
+	{
+		auto toolbar = static_cast<Toolbar*>(sender);
+		auto rect = toolbar->GetButtonRect(args->CommandID);
+		::MapWindowPoints(toolbar->GetHandle(), HWND_DESKTOP, reinterpret_cast<LPPOINT>(&rect), 2);
+		menu->Show(rect.left, rect.bottom);
+	});
+}
+
 std::pair<UINT, UINT> Toolbar::GetButtonSize(int index)
 {
 	RECT rect;
@@ -72,6 +85,38 @@ std::pair<UINT, UINT> Toolbar::GetTotalSize()
 	return std::make_pair(size.cx, size.cy);
 }
 
+void Toolbar::OnClick(WPARAM wParam, LPARAM lParam)
+{
+	auto lpnm = reinterpret_cast<LPNMMOUSE>(lParam);
+	auto& arg = tempArgs.tempMouseArgs;
+	arg->CommandID = lpnm->dwItemSpec;
+	arg->PosX = lpnm->pt.x;
+	arg->PosY = lpnm->pt.y;
+	arg->wasHandled = false;
+	auto it = MouseUp.find(arg->CommandID);
+	//assert(it != MouseUp.end());
+	if (it != MouseUp.end())
+	{
+		Yupei::RoutedInvoke(it->second, this, arg.get());
+	}
+}
+
+void Toolbar::OnDropdown(WPARAM wParam, LPARAM lParam)
+{
+	auto lpnm = reinterpret_cast<LPNMMOUSE>(lParam);
+	auto& arg = tempArgs.tempMouseArgs;
+	arg->CommandID = lpnm->dwItemSpec;
+	arg->PosX = lpnm->pt.x;
+	arg->PosY = lpnm->pt.y;
+	arg->wasHandled = false;
+	auto it = Dropdown.find(arg->CommandID);
+	//assert(it != MouseUp.end());
+	if (it != Dropdown.end())
+	{
+		Yupei::RoutedInvoke(it->second, this, arg.get());
+	}
+}
+
 void Toolbar::ProcessMessage(WPARAM wParam, LPARAM lParam)
 {
 	//Process WM_NOTIFY only.
@@ -81,7 +126,11 @@ void Toolbar::ProcessMessage(WPARAM wParam, LPARAM lParam)
 	case NM_CLICK:
 		OnClick(wParam, lParam);
 		break;
+	case TBN_DROPDOWN:
+		OnDropdown(wParam, lParam);
+		break;
 	default:
 		break;
 	}
 }
+

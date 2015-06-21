@@ -3,6 +3,7 @@
 #include "..\BasicLibrary\NativeWindow.h"
 #include "..\BasicLibrary\WindowBase.h"
 #include <CommCtrl.h>
+#include <utility>
 
 struct ToolbarRoutedArgs : Yupei::RoutedEventArgs
 {
@@ -13,6 +14,12 @@ struct ToolbarMouseArgs : ToolbarRoutedArgs
 {
 	int PosX, PosY;
 };
+
+namespace Yupei
+{
+	class Menu;
+}
+	
 
 class Toolbar : public Yupei::NativeWindow
 {
@@ -26,6 +33,13 @@ public:
 	{
 		SendMess(TB_AUTOSIZE, 0, 0);
 	}
+	RECT GetButtonRect(UINT id)
+	{
+		RECT rect;
+		SendMess(TB_GETRECT, static_cast<WPARAM>(id), reinterpret_cast<LPARAM>(&rect));
+		return rect;
+	}
+	void SetDropdownMenu(UINT id,std::shared_ptr<Yupei::Menu> menu);
 	std::pair<UINT, UINT> GetButtonSize(int index);
 	std::pair<UINT, UINT> GetTotalSize();
 	void Show()
@@ -33,22 +47,17 @@ public:
 		OnResize();
 		NativeWindow::Show();
 	}
-	virtual void OnClick(WPARAM wParam, LPARAM lParam)
+	void OnClick(WPARAM wParam, LPARAM lParam);
+	void OnDropdown(WPARAM wParam, LPARAM lParam);
+	template<typename... Args>
+	static std::shared_ptr<Toolbar> CreateInstance(Args&&... args)
 	{
-		auto lpnm = reinterpret_cast<LPNMMOUSE>(lParam);
-		auto& arg = tempArgs.tempMouseArgs;
-		arg->CommandID = lpnm->dwItemSpec;
-		arg->PosX = lpnm->pt.x;
-		arg->PosY = lpnm->pt.y;
-		arg->wasHandled = false;
-		auto it = MouseUp.find(arg->CommandID);
-		//assert(it != MouseUp.end());
-		if (it != MouseUp.end())
-		{
-			Yupei::RoutedInvoke(it->second, this, arg.get());
-		}
+		auto ptr = std::make_shared<Toolbar>(std::forward<Args>(args)...);
+		ptr->AddToTable();
+		return ptr;
 	}
 	std::unordered_map<int,Yupei::Event<ToolbarMouseArgs>> MouseUp;
+	std::unordered_map<int, Yupei::Event<ToolbarMouseArgs>> Dropdown;
 	std::unordered_map<int, Yupei::Event<ToolbarMouseArgs>> MouseDown;
 private:
 	struct TempEventArgs
@@ -62,3 +71,5 @@ private:
 	// Inherited via NativeWindow
 	virtual void ProcessMessage(WPARAM wParam, LPARAM lParam) override;
 };
+
+
