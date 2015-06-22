@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Windows.h>
 
 namespace Yupei
@@ -16,4 +17,19 @@ namespace Yupei
 	{
 		return ::GetModuleHandle(nullptr);
 	}
+
+	struct DeviceHelper
+	{
+	public:
+		static RECT GetResolution(HWND _windowHandle)
+		{
+			MONITORINFO info = { sizeof(MONITORINFO) };
+			::GetMonitorInfo(
+				::MonitorFromWindow(_windowHandle, MONITOR_DEFAULTTONEAREST),
+				&info);
+			return info.rcMonitor;
+		}
+	private:
+
+	};
 }

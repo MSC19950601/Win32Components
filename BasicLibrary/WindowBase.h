@@ -30,9 +30,13 @@ namespace Yupei
 
 		friend LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
-		WindowBase();
 		WindowBase(const std::wstring& title);
-		
+		WindowBase(
+			const POINT& leftTop = POINT{CW_USEDEFAULT,CW_USEDEFAULT},
+			int width = CW_USEDEFAULT,
+			int height = CW_USEDEFAULT,
+			const std::wstring& title = std::wstring{}
+			);
 		
 		HWND GetWindowHandle() const noexcept
 		{
@@ -135,6 +139,23 @@ namespace Yupei
 				TRUE);
 		}
 
+		void HideWindow()
+		{
+			::CloseWindow(windowHandle);
+		}
+
+		void SetWindowsStyle(bool b = false)
+		{
+			if (b == true)
+			{
+				SetWindowStyle(GetWindowStyle() | WS_SIZEBOX | WS_SYSMENU);
+			}
+			else
+			{
+				SetWindowStyle(GetWindowStyle() &~WS_SIZEBOX &~WS_SYSMENU&~WS_BORDER);
+			}
+		}
+
 		void SetFixed(bool isFixed = true)
 		{
 			if (isFixed)
@@ -165,6 +186,11 @@ namespace Yupei
 		auto GetWicImagingFactory()
 		{
 			return resources.GetGraphicsResource().WicImagingFactory;
+		}
+
+		ID2D1HwndRenderTarget* GetRenderTarget() const
+		{
+			return renderTarget;
 		}
 
 		//Events
@@ -199,6 +225,10 @@ namespace Yupei
 		}
 		
 		HWND Create(const std::wstring& title);
+		HWND Create(const std::wstring& title, 
+			const POINT& leftTop,
+			int width = CW_USEDEFAULT,
+			int height = CW_USEDEFAULT);
 		void Initialize();
 		void InitializeRenderTarget()
 		{

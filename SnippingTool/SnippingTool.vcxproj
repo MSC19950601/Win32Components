@@ -73,13 +73,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ImageCapture.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SnippingManager.h" />
     <ClInclude Include="ToolBar.h" />
+    <ClInclude Include="ToolbarCtrl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ImageCapture.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="ToolBar.cpp" />
+    <ClCompile Include="ToolbarCtrl.cpp" />
     <ClCompile Include="WinMain.cpp" />
   </ItemGroup>
   <ItemGroup>

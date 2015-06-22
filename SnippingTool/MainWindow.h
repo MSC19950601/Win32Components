@@ -15,6 +15,18 @@ public:
 	void OnResize(UINT width, UINT height) override;
 
 	void Initialize();
+	void OnRender() override
+	{
+		if (screenshot != nullptr && screenshot != nullptr)
+		{
+			
+			//GetRenderTarget()->DrawBitmap(screenshot);
+		}
+	}
+	void SetScreenshot(CComPtr<ID2D1Bitmap> shot)
+	{
+		screenshot = std::move(shot);
+	}
 
 private:
 	
@@ -34,6 +46,9 @@ private:
 		CancelIndex,
 		SettingsIndex
 	};
+
+	
+	CComPtr<ID2D1Bitmap> screenshot;
 
 	void InitializeToolbar();
 	void InitializeContextMenu();

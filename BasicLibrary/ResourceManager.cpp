@@ -17,10 +17,11 @@ namespace Yupei
 	}
 	void PublicResource::InitializeCom()
 	{
-		::CoInitialize(nullptr);
+		
 	}
 	GraphicsResource::GraphicsResource()
 	{
+		::CoInitialize(nullptr);
 		::D2D1CreateFactory(
 			D2D1_FACTORY_TYPE_SINGLE_THREADED,
 			&D2DFactory);

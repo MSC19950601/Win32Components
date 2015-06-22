@@ -22,9 +22,9 @@ namespace Yupei
 	struct PublicResource
 	{
 	public:
-		GraphicsResource& GetGraphicsResource()
+		static GraphicsResource& GetGraphicsResource()
 		{
-			return independentResource;
+			return GetInstance().independentResource;
 		}
 		static PublicResource& GetInstance()
 		{

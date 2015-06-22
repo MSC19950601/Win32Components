@@ -2,6 +2,8 @@
 #include "ToolBar.h"
 #include "..\BasicLibrary\Menu.h"
 #include "..\BasicLibrary\Application.h"
+#include "ImageCapture.h"
+#include "..\BasicLibrary\Picture.h"
 
 const wchar_t* const MainWindow::windowTitle = L"Snipping Tool";
 
@@ -28,10 +30,12 @@ void MainWindow::Initialize()
 	toolbar->Show();
 	auto size = toolbar->GetTotalSize();
 	SetClientSizeWithPhysic(size.first, size.second);
-	SetFixed(true);
-	toolbar->MouseUp[ToolbarCommands::CancelCommand].AddHandler(
+	//SetFixed(true);
+	toolbar->MouseUp[ToolbarCommands::NewCommand].AddHandler(
 		[this](void*, ToolbarMouseArgs* args)
 	{
+		//this->SetClientSizeWithPhysic(500,500);
+		
 		//Yupei::Application::ExitApplication();
 	});
 }

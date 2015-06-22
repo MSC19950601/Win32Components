@@ -52,6 +52,19 @@ namespace Yupei
 		SetInfo(itemID);
 	}
 
+	std::shared_ptr<Menu> Menu::GetSubMenu(UINT itemID)
+	{
+		auto _menuhandle = ::GetSubMenu(menuHandle, itemID);
+		auto it = Menu::menusMap.find(_menuhandle);
+		if (it == menusMap.end())
+		{
+			auto ptr = Menu::CreateInstance(*this);
+			ptr->menuHandle = _menuhandle;
+			return ptr;
+		}
+		else return it->second;
+	}
+
 	
 
 	void Menu::Show(int x, int y)
@@ -59,7 +72,7 @@ namespace Yupei
 		::TrackPopupMenuEx(
 			menuHandle,
 			TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_VERTICAL,
-			x, y, parentWindow->GetWindowHandle(), nullptr);
+			x, y, parentWindow.lock()->GetWindowHandle(), nullptr);
 	}
 	void Menu::DispatchContextMenuMessage(WPARAM wParam, LPARAM lParam)
 	{

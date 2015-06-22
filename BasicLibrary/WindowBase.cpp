@@ -8,15 +8,25 @@
 
 namespace Yupei
 {
-	WindowBase::WindowBase()
-		:WindowBase(L"")
-	{
-		
-	}
 	WindowBase::WindowBase(const std::wstring & title)
 		:resources(PublicResource::GetInstance())
 	{
 		windowHandle = Create(title);
+		Initialize();
+	}
+	/*WindowBase::WindowBase()
+		:WindowBase(L"")
+	{
+		
+	}*/
+	WindowBase::WindowBase(
+		const POINT& leftTop,
+		int width,
+		int height,
+		const std::wstring& title)
+		:resources(PublicResource::GetInstance())
+	{
+		windowHandle = Create(title,leftTop,width,height);
 		Initialize();
 	}
 	void WindowBase::SetWindowSizeWithPhysic(UINT width, UINT height)
@@ -62,15 +72,22 @@ namespace Yupei
 
 	HWND WindowBase::Create(const std::wstring& title)
 	{
+		return Create(title, POINT{ CW_USEDEFAULT,CW_USEDEFAULT });
+	}
+	HWND WindowBase::Create(const std::wstring & title, 
+		const POINT& leftTop,
+		int width,
+		int height)
+	{
 		static WindowClass wndClass; // register window class once
 		return ::CreateWindow(
 			WindowClass::DefaultWindowClassName,
 			title.c_str(),
 			WS_OVERLAPPEDWINDOW,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
-			CW_USEDEFAULT,
+			leftTop.x,
+			leftTop.y,
+			width,
+			height,
 			nullptr,
 			nullptr,
 			GetApplicationInstance(),

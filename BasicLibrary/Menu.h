@@ -50,23 +50,12 @@ namespace Yupei
 		{
 			::DestroyMenu(menuHandle);
 		}
-		void SetWindow(std::shared_ptr<WindowBase> window)
+		void SetWindow(std::weak_ptr<WindowBase> window)
 		{
 			parentWindow = std::move(window);
 		}
 		void SetSubMenu(UINT itemID, HMENU _subMenu);
-		std::shared_ptr<Menu> GetSubMenu(UINT itemID)
-		{
-			auto _menuhandle = ::GetSubMenu(menuHandle, itemID);
-			auto it = Menu::menusMap.find(_menuhandle);
-			if (it == menusMap.end())
-			{
-				auto ptr = Menu::CreateInstance(*this);
-				ptr->menuHandle = _menuhandle;
-				return ptr;
-			}
-			else return it->second;
-		}
+		std::shared_ptr<Menu> GetSubMenu(UINT itemID);
 		template<typename... Args>
 		static std::shared_ptr<Menu> CreateInstance(Args&&... args)
 		{
@@ -89,7 +78,7 @@ namespace Yupei
 		static void DispatchContextMenuMessage(WPARAM wParam, LPARAM lParam);
 	protected:
 		HMENU menuHandle;
-		std::shared_ptr<WindowBase> parentWindow;
+		std::weak_ptr<WindowBase> parentWindow;
 		RECT menuRegion;
 		bool isEnabled;
 	private:
