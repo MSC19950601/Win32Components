@@ -24,7 +24,7 @@ namespace Yupei
 class Toolbar : public Yupei::NativeWindow
 {
 public:
-	Toolbar(Yupei::WindowBase* parent, DWORD styles, DWORD exStyles);
+	
 
 	void AddButtons(const std::vector<TBBUTTON>& buttons);
 	void AddImages(const std::vector<INT_PTR>& images,int width,int height, const COLORREF& colorFrom);
@@ -39,6 +39,10 @@ public:
 		SendMess(TB_GETRECT, static_cast<WPARAM>(id), reinterpret_cast<LPARAM>(&rect));
 		return rect;
 	}
+	void SetChecked(UINT id,BOOL isChecked = TRUE)
+	{
+		SendMess(TB_CHECKBUTTON, static_cast<WPARAM>(id), static_cast<LPARAM>(isChecked));
+	}
 	void SetDropdownMenu(UINT id,std::shared_ptr<Yupei::Menu> menu);
 	std::pair<UINT, UINT> GetButtonSize(int index);
 	std::pair<UINT, UINT> GetTotalSize();
@@ -52,14 +56,15 @@ public:
 	template<typename... Args>
 	static std::shared_ptr<Toolbar> CreateInstance(Args&&... args)
 	{
-		auto ptr = std::make_shared<Toolbar>(std::forward<Args>(args)...);
-		ptr->AddToTable();
+		auto ptr = std::shared_ptr<Toolbar>(new Toolbar(std::forward<Args>(args)...));
+		ptr->AddToTable(ptr);
 		return ptr;
 	}
 	std::unordered_map<int,Yupei::Event<ToolbarMouseArgs>> MouseUp;
 	std::unordered_map<int, Yupei::Event<ToolbarMouseArgs>> Dropdown;
 	std::unordered_map<int, Yupei::Event<ToolbarMouseArgs>> MouseDown;
 private:
+	Toolbar(Yupei::WindowBase* parent, DWORD styles, DWORD exStyles);
 	struct TempEventArgs
 	{
 		std::unique_ptr<ToolbarMouseArgs> tempMouseArgs = std::make_unique<ToolbarMouseArgs>();

@@ -24,25 +24,14 @@ namespace Yupei
 
 	//TODO
 	//InsertMenu
-	class Menu : public std::enable_shared_from_this<Menu>
+	class Menu 
 	{
 	public:
 		HMENU GetMenuHandle() const
 		{
 			return menuHandle;
 		}
-		Menu()
-			:Menu(RECT{})
-		{
-			
-		}
-		explicit Menu(int resourceID);
-		Menu(const RECT& rect)
-			:menuHandle(::CreatePopupMenu()),menuRegion(rect)
-		{
-			assert(Menu::menusMap.find(menuHandle) == Menu::menusMap.end());
-		}
-		Menu(int resourceID, const RECT& rect);
+		
 		MenuItemState GetItemState(UINT itemID) const;
 		std::wstring GetItemString(UINT itemID) const;
 		void SetItemString(UINT itemID, const std::wstring& str);
@@ -59,29 +48,50 @@ namespace Yupei
 		template<typename... Args>
 		static std::shared_ptr<Menu> CreateInstance(Args&&... args)
 		{
-			auto ptr = std::make_shared<Menu>(std::forward<Args>(args)...);
-			ptr->AddToTable();
-			menusMap.insert(std::make_pair(ptr->menuHandle, ptr));
+			auto ptr = std::shared_ptr<Menu>(new Menu(std::forward<Args>(args)...));
+			Menu::AddToMenuTable(ptr);
 			return ptr;
 		}
 		Menu(const Menu& m) = default;
 		static std::unordered_map<int, Event<RoutedEventArgs>> OnCommand;
-		void AddToTable()
+		static void AddToContextTable(std::shared_ptr<Menu> menu)
 		{
-			Menu::contextMenus.push_back(shared_from_this());
+			Menu::contextMenus.push_back(std::move(menu));
+			//Menu::menusMap.
+		}
+		static void AddToMenuTable(std::shared_ptr<Menu> menu)
+		{
+			Menu::menusMap.insert(std::make_pair(menu->menuHandle, std::move(menu)));
 		}
 		void SetRegion(const RECT& rect)
 		{
 			menuRegion = rect;
 		}
+		static void DispatchCommandMessage(WPARAM wParam, LPARAM lParam)
+		{
+			RoutedInvoke(Menu::OnCommand[LOWORD(wParam)], nullptr, routedArguments.get());
+		}
 		void Show(int x, int y);
 		static void DispatchContextMenuMessage(WPARAM wParam, LPARAM lParam);
 	protected:
+		Menu()
+			:Menu(RECT{})
+		{
+
+		}
+		explicit Menu(int resourceID);
+		Menu(const RECT& rect)
+			:menuHandle(::CreatePopupMenu()), menuRegion(rect)
+		{
+			assert(Menu::menusMap.find(menuHandle) == Menu::menusMap.end());
+		}
+		Menu(int resourceID, const RECT& rect);
 		HMENU menuHandle;
 		std::weak_ptr<WindowBase> parentWindow;
 		RECT menuRegion;
 		bool isEnabled;
 	private:
+		static std::unique_ptr<RoutedEventArgs> routedArguments;//= std::make_unique<RoutedEventArgs>();
 		mutable MENUITEMINFO tempInfo = { sizeof(MENUITEMINFO) };
 		void GetInfo(UINT itemID) const
 		{

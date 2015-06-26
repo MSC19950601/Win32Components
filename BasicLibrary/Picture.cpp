@@ -1,7 +1,8 @@
 #include "Picture.h"
 #include "Helper.h"
 #include "ResourceManager.h"
-
+#include <cctype>
+#include <cassert>
 namespace Yupei
 {
 	Picture::Picture(int id)
@@ -40,7 +41,7 @@ namespace Yupei
 	std::pair<BYTE*, UINT> Picture::GetAllData()
 	{
 		auto size = GetPixels();
-		WICRect rect = { 0,0,size.first,size.second };
+		WICRect rect = { 0,0,static_cast<INT>(size.first),static_cast<INT>(size.second) };
 		return GetBitmapData(rect);
 	}
 	void Picture::FillWithFrames(IWICBitmapDecoder* decoder)
@@ -53,14 +54,15 @@ namespace Yupei
 			decoder->GetFrame(i, &frameDecoders[i]);
 		}
 	}
-	Picture::Picture(std::vector<unsigned char>&& buffer)
+	Picture::Picture(std::vector<unsigned char> buffer)
 	{
 		CComPtr<IWICStream> stream ;
+		bitmapData = std::move(buffer);
 		auto wicFactory = PublicResource::GetGraphicsResource().WicImagingFactory.p;
 		InitializeWithBuffer(
 			wicFactory,
-			&buffer[0],
-			buffer.size());
+			&bitmapData[0],
+			bitmapData.size());
 	}
 	Picture::Picture(const std::wstring & fileName)
 	{
@@ -86,6 +88,28 @@ namespace Yupei
 		return res;
 
 	}
+	CComPtr<ID2D1Bitmap> Picture::GetClippedD2DBitmap(ID2D1RenderTarget * target, const WICRect& rect, UINT frameID) const
+	{
+		CComPtr<ID2D1Bitmap> res;
+		CComPtr<IWICFormatConverter> converter;
+		CComPtr<IWICBitmapClipper> clipper;
+		auto wicFactory = PublicResource::GetGraphicsResource().WicImagingFactory.p;
+		auto frame = frameDecoders[frameID];
+		wicFactory->CreateFormatConverter(
+			&converter);
+		wicFactory->CreateBitmapClipper(&clipper);
+		clipper->Initialize(frame, &rect);
+		HRESULT hr = converter->Initialize(
+			clipper,
+			GUID_WICPixelFormat32bppPBGRA,
+			WICBitmapDitherTypeNone,
+			nullptr,
+			0.f,
+			WICBitmapPaletteTypeCustom);
+		hr = target->CreateBitmapFromWicBitmap(converter,
+			&res);
+		return res;
+	}
 	void Picture::InitializeWithBuffer(
 		IWICImagingFactory* factory, 
 		unsigned char * _buffer, 
@@ -105,6 +129,56 @@ namespace Yupei
 			WICDecodeMetadataCacheOnLoad,
 			&decoder);
 		FillWithFrames(decoder.p);
+	}
+	void Picture::SaveBitmapToFile(const std::wstring & path, IWICBitmap* bitmap)
+	{
+		auto wicFactory = PublicResource::GetGraphicsResource().WicImagingFactory.p;
+		CComPtr<IWICStream> stream;
+		CComPtr<IWICBitmapEncoder> encoder;
+		CComPtr<IWICBitmapFrameEncode> frameEncoder;
+		CComPtr<ID2D1Bitmap> newBitmap;
+		WICPixelFormatGUID format = GUID_WICPixelFormat32bppPBGRA;
+		wicFactory->CreateStream(&stream);
+		UINT width, height;
+		bitmap->GetSize(&width, &height);
+		stream->InitializeFromFilename(path.data(), GENERIC_WRITE);
+		HRESULT hr = wicFactory->CreateEncoder(Picture::PictureTypeParser(path),
+			nullptr,
+			&encoder);
+		hr = encoder->Initialize(stream, WICBitmapEncoderNoCache);
+		hr = encoder->CreateNewFrame(&frameEncoder, nullptr);
+		hr = frameEncoder->Initialize(nullptr);
+		hr = frameEncoder->SetSize(width, height);
+		hr = frameEncoder->SetPixelFormat(&format);
+		hr = frameEncoder->WriteSource(bitmap,nullptr);
+		hr = frameEncoder->Commit();
+		hr = encoder->Commit();
+	}
+	GUID Picture::PictureTypeParser(const std::wstring & path)
+	{
+		auto pos = path.find_last_of(L'.');
+		auto posfix = std::wstring(path.begin() + pos + 1,
+			path.begin()+path.find_first_of(L'\0'));
+		for (auto& c : posfix) 
+			c = std::tolower(c);
+		if (posfix == L"png")
+		{
+			return GUID_ContainerFormatPng;
+		}
+		else if (posfix == L"gif")
+		{
+			return GUID_ContainerFormatGif;
+		}
+		if (posfix == L"jpeg")
+		{
+			return GUID_ContainerFormatJpeg;
+		}
+		if (posfix == L"BMP")
+		{
+			return GUID_ContainerFormatBmp;
+		}
+		else assert(0);
+		//return GUID_ContainerFormatPng;
 	}
 }
 

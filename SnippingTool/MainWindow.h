@@ -3,33 +3,30 @@
 #include "resource.h"
 #include "..\BasicLibrary\WindowBase.h"
 #include "..\BasicLibrary\Menu.h"
+#include <d2d1.h>
+#include <wincodec.h>
 
 class Toolbar;
-
+class ToolbarCtrl;
+class SnippingWindow;
+namespace Yupei
+{
+	class Picture;
+}
 
 class MainWindow : public Yupei::WindowBase,public std::enable_shared_from_this<MainWindow>
 {
 public:
-	MainWindow();
-
+	friend class SnippingManager;
+	friend class ToolbarCtrl;
+	//friend class SnippingWindow;
 	void OnResize(UINT width, UINT height) override;
-
+	void OnRender() override;
 	void Initialize();
-	void OnRender() override
-	{
-		if (screenshot != nullptr && screenshot != nullptr)
-		{
-			
-			//GetRenderTarget()->DrawBitmap(screenshot);
-		}
-	}
-	void SetScreenshot(CComPtr<ID2D1Bitmap> shot)
-	{
-		screenshot = std::move(shot);
-	}
-
+	static std::shared_ptr<MainWindow> GetInstance();
+	CComPtr<ID2D1Bitmap> bitmapToDraw;
 private:
-	
+	MainWindow();
 	static const wchar_t* const windowTitle;
 	static const int MainWindowWidth = 316;
 	static const int MainWindowHeight = 125;
@@ -46,18 +43,19 @@ private:
 		CancelIndex,
 		SettingsIndex
 	};
-
 	
-	CComPtr<ID2D1Bitmap> screenshot;
-
 	void InitializeToolbar();
 	void InitializeContextMenu();
 	
-	HMENU mainMenuHandle = nullptr;
-
+	std::shared_ptr<Yupei::Menu> mainMenu;
+	CComPtr<ID2D1BitmapRenderTarget> bitmapRenderTarget;
+	CComPtr<IWICBitmap> tempBitmap;
+	CComPtr<ID2D1Bitmap> tempD2DBitmap;
 	std::shared_ptr<Toolbar> toolbar;
+	std::shared_ptr<Toolbar> afterToolbar;
 	std::shared_ptr<Yupei::Menu> snippingMenu;
-
+	std::shared_ptr<ToolbarCtrl> toolbarCtrl;
+	std::shared_ptr<SnippingWindow> snippingWindow;
 	int toolbarCommands[3] = { NewCommand,CancelCommand,SettingsCommand };
 };				 
 

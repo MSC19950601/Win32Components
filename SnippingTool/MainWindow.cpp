@@ -4,15 +4,27 @@
 #include "..\BasicLibrary\Application.h"
 #include "ImageCapture.h"
 #include "..\BasicLibrary\Picture.h"
+#include "ToolbarCtrl.h"
+#include "..\BasicLibrary\CreateParam.h"
+#include "resource.h"
+#include "SnippingWindow.h"
+#include <functional>
 
 const wchar_t* const MainWindow::windowTitle = L"Snipping Tool";
 
 MainWindow::MainWindow()
-	:WindowBase(windowTitle),
+	:WindowBase(std::make_unique<Yupei::CreateParam>(L"YupeiWindow", windowTitle)),
 	toolbar(Toolbar::CreateInstance(this, 
 		TBSTYLE_LIST | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT, TBSTYLE_EX_DRAWDDARROWS)),
-	snippingMenu(Yupei::Menu::CreateInstance(IDR_SNIP_MENU))
+	snippingMenu(Yupei::Menu::CreateInstance(IDR_SNIP_MENU)),
+	snippingWindow(SnippingWindow::GetInstance(GetWindowHandle())),
+	mainMenu(Yupei::Menu::CreateInstance(IDR_MAIN_MENU))
+	//toolbarCtrl(std::make_shared<ToolbarCtrl>())
 {
+	SetFixed();
+	/*renderTarget->CreateCompatibleRenderTarget(
+		&bitmapRenderTarget);*/
+	//SetMainMenu(mainMenu.get());
 	
 }
 
@@ -20,6 +32,11 @@ MainWindow::MainWindow()
 void MainWindow::OnResize(UINT width, UINT height)
 {
 	toolbar->OnResize();
+}
+
+void MainWindow::OnRender()
+{
+	toolbarCtrl->OnMainWindowRender();
 }
 
 void MainWindow::Initialize()
@@ -32,12 +49,41 @@ void MainWindow::Initialize()
 	SetClientSizeWithPhysic(size.first, size.second);
 	//SetFixed(true);
 	toolbar->MouseUp[ToolbarCommands::NewCommand].AddHandler(
-		[this](void*, ToolbarMouseArgs* args)
-	{
-		//this->SetClientSizeWithPhysic(500,500);
-		
-		//Yupei::Application::ExitApplication();
-	});
+		std::bind(&ToolbarCtrl::OnNewClicked, 
+			toolbarCtrl.get(),
+			std::placeholders::_1,
+			std::placeholders::_2)
+		);
+	toolbar->MouseUp[ToolbarCommands::CancelCommand].AddHandler(
+		std::bind(
+			&ToolbarCtrl::OnCancelClicked, 
+			toolbarCtrl.get(), 
+			std::placeholders::_1,
+			std::placeholders::_2));
+	Yupei::Menu::OnCommand[ID_ENTIRE].AddHandler(
+		std::bind(
+			&ToolbarCtrl::OnEntireSelect,
+			toolbarCtrl.get(),
+			std::placeholders::_1,
+			std::placeholders::_2));
+	Yupei::Menu::OnCommand[ID_FILE_NEWSCREENSHOT].AddHandler(
+		std::bind(&ToolbarCtrl::OnMenuNewClicked,
+			toolbarCtrl.get(),
+			std::placeholders::_1,
+			std::placeholders::_2));
+	Yupei::Menu::OnCommand[ID_FILE_SAVEAS].AddHandler(
+		std::bind(&ToolbarCtrl::OnSaveClicked,
+			toolbarCtrl.get(),
+			std::placeholders::_1,
+			std::placeholders::_2));
+}
+
+std::shared_ptr<MainWindow> MainWindow::GetInstance()
+{
+	auto sp = std::shared_ptr<MainWindow>(new MainWindow());
+	sp->toolbarCtrl = std::make_shared<ToolbarCtrl>(sp,sp->snippingWindow);
+	sp->snippingWindow->SetCtrl(sp->toolbarCtrl);
+	return sp;
 }
 
 void MainWindow::InitializeToolbar()
@@ -75,6 +121,7 @@ void MainWindow::InitializeToolbar()
 	};
 	toolbar->AddButtons(buttons);
 	toolbar->SetDropdownMenu(ToolbarCommands::NewCommand, snippingMenu->GetSubMenu(0));
+
 }
 
 void MainWindow::InitializeContextMenu()

@@ -2,26 +2,17 @@
 
 #include "RoutedEvent.h"
 #include "ResourceManager.h"
+#include "CreateParam.h"
+#include <unordered_map>
 #include <Windows.h>
 #include <memory>
 
 namespace Yupei
 {
-
 	extern LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam,LPARAM lParam);
-
-	struct WindowClass
-	{
-		static const wchar_t* const DefaultWindowClassName ;
-
-		WindowClass();
-
-		WNDCLASSEX windowClass;
-		
-	};
-	
+	extern VOID CALLBACK TimerProc(HWND _windowHandle, UINT message, UINT_PTR eventID, DWORD _time);
 	struct GraphicsResource;
-
+	class Menu;
 	class WindowBase
 	{
 	public:
@@ -29,15 +20,13 @@ namespace Yupei
 		friend class ApplicationService;
 
 		friend LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
+		friend VOID CALLBACK TimerProc(HWND _windowHandle, UINT message, UINT_PTR eventID, DWORD _time);
+		WindowBase(ParamType param);
+		WindowBase()
+			:WindowBase(nullptr)
+		{
 
-		WindowBase(const std::wstring& title);
-		WindowBase(
-			const POINT& leftTop = POINT{CW_USEDEFAULT,CW_USEDEFAULT},
-			int width = CW_USEDEFAULT,
-			int height = CW_USEDEFAULT,
-			const std::wstring& title = std::wstring{}
-			);
-		
+		}
 		HWND GetWindowHandle() const noexcept
 		{
 			return windowHandle;
@@ -48,6 +37,7 @@ namespace Yupei
 		{
 			return static_cast<DWORD>(SetWindowInfo(GWL_STYLE, static_cast<LONG_PTR>(style)));
 		}
+		void SetMainMenu(Menu* _menu);
 		DWORD SetExStyle(DWORD style)
 		{
 			return static_cast<DWORD>(SetWindowInfo(GWL_EXSTYLE, static_cast<LONG_PTR>(style)));
@@ -59,6 +49,11 @@ namespace Yupei
 		DWORD GetExStyle() const
 		{
 			return static_cast<DWORD>(GetWindowInfo(GWL_EXSTYLE));
+		}
+
+		void ForceRedraw()
+		{
+			::InvalidateRect(windowHandle, nullptr, TRUE);
 		}
 
 		LONG_PTR GetWindowInfo(int index) const
@@ -76,6 +71,11 @@ namespace Yupei
 				info);
 		}
 
+		void SetForeground()
+		{
+			::SetForegroundWindow(windowHandle);
+		}
+
 		template <typename U,typename T>
 		U DipsToPixelsX(T x) const noexcept
 		{
@@ -86,6 +86,18 @@ namespace Yupei
 		U DipsToPixelsY(T y) const noexcept
 		{
 			return static_cast<U>(static_cast<float>(y) * dpiY / 96.f);
+		}
+
+		template <typename U, typename T>
+		U PixelsToDipsX(T x) const noexcept
+		{
+			return static_cast<U>(static_cast<float>(x) /( dpiX / 96.f));
+		}
+
+		template <typename U, typename T>
+		U PixelsToDipsY(T y) const noexcept
+		{
+			return static_cast<U>(static_cast<float>(y) /( dpiY / 96.f));
 		}
 		
 		void SetWindowSizeWithPhysic(UINT width, UINT height);
@@ -104,7 +116,7 @@ namespace Yupei
 		}
 		
 		RECT GetWindowPos() const;
-		void Show();
+		void Show(int _cmd = SW_SHOWNORMAL);
 
 		virtual void OnResize(UINT width, UINT height) {}
 		virtual void OnRender() {}
@@ -139,6 +151,8 @@ namespace Yupei
 				TRUE);
 		}
 
+		void SetLeftTop(int x, int y);
+
 		void HideWindow()
 		{
 			::CloseWindow(windowHandle);
@@ -152,7 +166,7 @@ namespace Yupei
 			}
 			else
 			{
-				SetWindowStyle(GetWindowStyle() &~WS_SIZEBOX &~WS_SYSMENU&~WS_BORDER);
+				SetWindowStyle(GetWindowStyle() &~WS_SIZEBOX & ~WS_SYSMENU&~WS_BORDER&~WS_CAPTION);
 			}
 		}
 
@@ -193,12 +207,67 @@ namespace Yupei
 			return renderTarget;
 		}
 
+		enum class AnimateType
+		{
+			Fade = AW_BLEND,
+			CollapseToCenter = AW_CENTER,
+			FromLeftToRight = AW_HOR_POSITIVE,
+			FromRightToLeft = AW_HOR_NEGATIVE,
+			Silde = AW_SLIDE,
+			FromTopToBottom = AW_VER_POSITIVE,
+			FromBottomToTop = AW_VER_NEGATIVE
+		};
+		void AnimateShow(DWORD _time, AnimateType _type)
+		{
+			Animate(_time, _type, true);
+		}
+		void AnimateHide(DWORD _time, AnimateType _type)
+		{
+			Animate(_time, _type, false);
+		}
+		
+		void SetCreateParam(ParamType _param);
+
+		void RegisterTimer(DWORD _time,UINT_PTR id)
+		{
+			::SetTimer(windowHandle, id, _time, TimerProc);
+			//
+		}
+		template<typename Type>
+		void AddTimer(UINT_PTR id, Type&& t)
+		{
+			TimerEvent[id].AddHandler(std::forward<Type>(t));
+		}
+		void DeleteTimer(UINT_PTR id)
+		{
+			auto it = TimerEvent.find(id);
+			if (it != TimerEvent.end())
+			{
+				::KillTimer(windowHandle, id);
+				TimerEvent.erase(it);
+			}
+			//TimerEvent.erase(id);
+		}
 		//Events
 
 		Event<CreateArgs> WinCreate;
-		Event<MouseArgs> MouseDown;
-		Event<MouseArgs> MouseUp;
+		Event<MouseArgs> LeftMouseDown;
+		Event<MouseArgs> LeftMouseUp;
+		Event<MouseArgs> MouseMove;
+		
 	protected:
+		static WindowBase* GetWindow(HWND _windowHandle)
+		{
+			return windowsMap[_windowHandle];
+		}
+		static void AddWindow(WindowBase* _window)
+		{
+			windowsMap[_window->GetWindowHandle()] = std::move(_window);
+		}
+		static void RemoveWindow(HWND _windowHandle)
+		{
+			windowsMap.erase(_windowHandle);
+		}
 		HWND windowHandle = nullptr;
 
 		PublicResource resources;
@@ -210,11 +279,23 @@ namespace Yupei
 		{
 			RoutedInvoke(WinCreate, sender, args);
 		}
+		virtual void OnLeftButtonDown(WPARAM wParam, LPARAM lParam);
+		virtual void OnLeftButtonUp(WPARAM wParam, LPARAM lParam);
+		virtual void OnMouseMove(WPARAM wParam, LPARAM lParam);
 	private:
+		static std::unordered_map<UINT_PTR, Event<RoutedEventArgs>> TimerEvent;
+		void Animate(DWORD _time, AnimateType _type, bool isShow)
+		{
+			DWORD flag = static_cast<DWORD>(_type);
+			flag |= (isShow ?AW_ACTIVATE  :AW_HIDE );
+			::AnimateWindow(windowHandle, _time, flag);
+		}
+
 		struct BasicEventArguments
 		{
 			std::unique_ptr<CreateArgs> CreateArguments = std::make_unique<CreateArgs>();
-
+			std::unique_ptr<RoutedEventArgs> RoutedArguments = std::make_unique<RoutedEventArgs>();
+			std::unique_ptr<MouseArgs> MouseArguments = std::make_unique<MouseArgs>();
 		};
 		BasicEventArguments eventArguments;
 		void SetResources(const PublicResource& _resources) noexcept;
@@ -223,12 +304,10 @@ namespace Yupei
 			// do nothing
 			OnCreate(this, eventArguments.CreateArguments.get());
 		}
+		void PreProcessButtonMessage(WPARAM wParam, LPARAM lParam);
 		
-		HWND Create(const std::wstring& title);
-		HWND Create(const std::wstring& title, 
-			const POINT& leftTop,
-			int width = CW_USEDEFAULT,
-			int height = CW_USEDEFAULT);
+		/*HWND Create(const std::wstring& title);*/
+		void Create();
 		void Initialize();
 		void InitializeRenderTarget()
 		{
@@ -244,6 +323,16 @@ namespace Yupei
 			dpiY = static_cast<float>(GetDeviceCaps(hdc, LOGPIXELSY)) ;
 			ReleaseDC(nullptr, hdc);
 		}
+		void SubClass(WNDPROC _newProc)
+		{
+			_oldProc = reinterpret_cast<WNDPROC>(GetWindowInfo(GWLP_WNDPROC));
+			SetWindowInfo(GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(_newProc));
+		}
 		
+		static std::unordered_map<HWND, WindowBase*> windowsMap;
+	
+		std::shared_ptr<WindowClass> _windowClass;
+		ParamType _createParam = nullptr;
+		WNDPROC _oldProc;
 	};
 }

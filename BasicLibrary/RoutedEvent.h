@@ -25,6 +25,7 @@ namespace Yupei
 				break;
 			}
 		}
+		args->wasHandled = false;
 	}
 
 	// Event Arguments
@@ -37,6 +38,15 @@ namespace Yupei
 	struct MouseArgs : RoutedEventArgs
 	{
 		int X, Y;
+		bool IsCtrlDown;
+		enum class MouseButtons
+		{
+			LeftButton = 0x0001,
+			RightButton = 0x0002,
+			MiddleButton = 0x0010
+		};
+		MouseButtons ButtonClicked;
+		bool IsShiftDown;
 		// so on
 	};
 

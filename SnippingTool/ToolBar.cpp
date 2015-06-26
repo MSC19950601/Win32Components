@@ -1,4 +1,5 @@
 #include "ToolBar.h"
+#include "..\BasicLibrary\Helper.h"
 #include "..\BasicLibrary\Menu.h"
 
 Toolbar::Toolbar(Yupei::WindowBase * parent, DWORD styles, DWORD exStyles)

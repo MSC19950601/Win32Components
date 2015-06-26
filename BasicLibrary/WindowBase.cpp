@@ -3,31 +3,28 @@
 #include "Helper.h"
 #include "Application.h"
 #include "NativeWindow.h"
+#include "CreateParam.h"
+#include "Menu.h"
 #include <cassert>
-
+#include <windowsx.h>
+#undef GetWindowStyle
 
 namespace Yupei
 {
-	WindowBase::WindowBase(const std::wstring & title)
-		:resources(PublicResource::GetInstance())
+	std::unordered_map<HWND, WindowBase*> WindowBase::windowsMap{};
+	std::unordered_map<UINT_PTR, Event<RoutedEventArgs>> WindowBase::TimerEvent{};
+	WindowBase::WindowBase(ParamType param)
+		:_createParam(std::move(param)),
+		resources(PublicResource::GetInstance()),
+		_windowClass(WindowClass::GetInstance(L"YupeiWindow"))
 	{
-		windowHandle = Create(title);
 		Initialize();
 	}
-	/*WindowBase::WindowBase()
-		:WindowBase(L"")
+	void WindowBase::SetMainMenu(Menu * _menu)
 	{
-		
-	}*/
-	WindowBase::WindowBase(
-		const POINT& leftTop,
-		int width,
-		int height,
-		const std::wstring& title)
-		:resources(PublicResource::GetInstance())
-	{
-		windowHandle = Create(title,leftTop,width,height);
-		Initialize();
+		if(_menu != nullptr)
+			::SetMenu(windowHandle, _menu->GetMenuHandle());
+		else ::SetMenu(windowHandle, nullptr);
 	}
 	void WindowBase::SetWindowSizeWithPhysic(UINT width, UINT height)
 	{
@@ -59,44 +56,94 @@ namespace Yupei
 		::GetWindowRect(windowHandle, &rect);
 		return rect;
 	}
-	void WindowBase::Show()
+	void WindowBase::Show(int _cmd)
 	{
-		::ShowWindow(windowHandle, SW_SHOWNORMAL);
+		::ShowWindow(windowHandle, _cmd);
 		::UpdateWindow(windowHandle);
+	}
+	void WindowBase::SetLeftTop(int x, int y)
+	{
+		auto rect = GetWindowPos();
+		MoveWindowToWithPhysics(
+			x, y, GetRECTWidth<int>(rect), GetRECTHeight<int>(rect));
+	}
+	void WindowBase::SetCreateParam(ParamType _param)
+	{
+		assert(_createParam == nullptr);
+		_createParam = std::move(_param);
+		Initialize();
 	}
 	void WindowBase::SetResources(const PublicResource& _resources) noexcept
 	{
 		resources = _resources;
 		Initialize();
 	}
-
-	HWND WindowBase::Create(const std::wstring& title)
+	
+	void WindowBase::PreProcessButtonMessage(WPARAM wParam, LPARAM lParam)
 	{
-		return Create(title, POINT{ CW_USEDEFAULT,CW_USEDEFAULT });
+		auto& arg = eventArguments.MouseArguments;
+		arg->Reset();
+		arg->X = GET_X_LPARAM(lParam);
+		arg->Y = GET_Y_LPARAM(lParam);
+		arg->IsCtrlDown = !!(wParam & MK_CONTROL);
+		arg->IsShiftDown = !!(wParam & MK_SHIFT);
+		arg->ButtonClicked = static_cast<MouseArgs::MouseButtons>(wParam);
 	}
-	HWND WindowBase::Create(const std::wstring & title, 
-		const POINT& leftTop,
-		int width,
-		int height)
+
+	void WindowBase::OnLeftButtonDown(WPARAM wParam, LPARAM lParam)
 	{
-		static WindowClass wndClass; // register window class once
-		return ::CreateWindow(
-			WindowClass::DefaultWindowClassName,
-			title.c_str(),
-			WS_OVERLAPPEDWINDOW,
-			leftTop.x,
-			leftTop.y,
-			width,
-			height,
-			nullptr,
-			nullptr,
-			GetApplicationInstance(),
-			static_cast<void*>(this));
+		PreProcessButtonMessage(wParam, lParam);
+		auto arg = eventArguments.MouseArguments.get();
+		RoutedInvoke(LeftMouseDown, this, arg);	
+	}
+	void WindowBase::OnLeftButtonUp(WPARAM wParam, LPARAM lParam)
+	{
+		PreProcessButtonMessage(wParam, lParam);
+		auto arg = eventArguments.MouseArguments.get();
+		RoutedInvoke(LeftMouseUp, this, arg);
+
+	}
+	void WindowBase::OnMouseMove(WPARAM wParam, LPARAM lParam)
+	{
+		PreProcessButtonMessage(wParam, lParam);
+		auto arg = eventArguments.MouseArguments.get();
+		RoutedInvoke(MouseMove, this, arg);
+	}
+
+	/*HWND WindowBase::Create(const std::wstring& title)
+	{
+		return Create(title, nullptr,POINT{ CW_USEDEFAULT,CW_USEDEFAULT });
+	}*/
+	void WindowBase::Create()
+	{
+		if (_createParam != nullptr)
+		{
+			
+			windowHandle = ::CreateWindowEx(
+				_createParam->ExStyle,
+				_createParam->ClassName.c_str(),
+				_createParam->WindowName.c_str(),
+				_createParam->Style,
+				_createParam->PosX,
+				_createParam->PosY,
+				_createParam->WindowWidth,
+				_createParam->WindowHeight,
+				_createParam->ParentWindow,
+				nullptr,
+				GetApplicationInstance(),
+				static_cast<void*>(this));
+			WindowBase::AddWindow(this);
+			SubClass(WindowProc);
+		}
 	}
 	void WindowBase::Initialize()
 	{
-		InitializeRenderTarget();
-		InitializeDpi();
+		Create();
+		if (windowHandle)
+		{
+			InitializeRenderTarget();
+			InitializeDpi();
+		}
 	}
 	LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -112,14 +159,15 @@ namespace Yupei
 				GWLP_USERDATA,
 				PtrToUlong(mainWindow));
 			wasHandled = false;
+			WindowBase::AddWindow(mainWindow);
 			mainWindow->ProcessMessage(windowHandle, message, wParam, lParam, wasHandled, result);
 		}
 		else
 		{
-			mainWindow = reinterpret_cast<WindowBase*>(
+			mainWindow = WindowBase::GetWindow(windowHandle);/*reinterpret_cast<WindowBase*>(
 				::GetWindowLongPtr(
 					windowHandle,
-					GWLP_USERDATA));
+					GWLP_USERDATA));*/
 			if (mainWindow)
 			{
 				switch (message)
@@ -133,10 +181,10 @@ namespace Yupei
 					if (renderTarget)
 					{
 						renderTarget->BeginDraw();
-						renderTarget->Clear(0);
+						renderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White));
 						mainWindow->OnRender();
 						HRESULT hr = renderTarget->EndDraw();
-						assert(SUCCEEDED(hr));
+						//assert(SUCCEEDED(hr));
 						//wasHandled = true;
 					}
 				}
@@ -150,17 +198,29 @@ namespace Yupei
 						renderTarget->Resize(D2D1::SizeU(
 							static_cast<UINT>(LOWORD(lParam)),
 							static_cast<UINT>(HIWORD(lParam))));
+						mainWindow->OnResize(static_cast<UINT>(LOWORD(lParam)),
+							static_cast<UINT>(HIWORD(lParam)));
 					}
 				}
 					break;
 				case WM_DESTROY:
 					::PostQuitMessage(0);
 					break;
+				case WM_LBUTTONDOWN:
+					mainWindow->OnLeftButtonDown(wParam, lParam);
+					break;
+				case WM_LBUTTONUP:
+					mainWindow->OnLeftButtonUp(wParam, lParam);
+					break;
+				case WM_MOUSEMOVE:
+					mainWindow->OnMouseMove(wParam, lParam);
+					break;
 				case WM_COMMAND:
 				{
 					switch (HIWORD(wParam))
 					{
 					case 0:
+						Menu::DispatchCommandMessage(wParam, lParam);
 						// for Menu
 						break;
 					case 1:
@@ -189,19 +249,12 @@ namespace Yupei
 		else return result;
 	}
 
-	const wchar_t* const WindowClass::DefaultWindowClassName = L"YupeiWindow";
-
-	WindowClass::WindowClass()
+	VOID CALLBACK TimerProc(HWND _windowHandle, UINT message, UINT_PTR eventID, DWORD _time)
 	{
-		::ZeroMemory(&windowClass, sizeof(WNDCLASSEX));
-		windowClass.cbSize = sizeof(WNDCLASSEX);
-		windowClass.lpfnWndProc = &WindowProc;
-		windowClass.hInstance = GetApplicationInstance();
-		windowClass.lpszClassName = DefaultWindowClassName;
-		windowClass.cbWndExtra = sizeof(char*);
-		windowClass.style = CS_VREDRAW | CS_HREDRAW;
-		::RegisterClassEx(&windowClass);
+		auto window = WindowBase::GetWindow(_windowHandle);
+		return RoutedInvoke(WindowBase::TimerEvent[eventID], window, window->eventArguments.RoutedArguments.get());
 	}
+
 }
 
 

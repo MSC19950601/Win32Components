@@ -8,7 +8,7 @@ namespace Yupei
 	std::unordered_map<int, Event<RoutedEventArgs>> Menu::OnCommand{};
 	std::vector<std::shared_ptr<Menu>> Menu::contextMenus{};
 	std::unordered_map<HMENU, std::shared_ptr<Menu>> Menu::menusMap{};
-
+	std::unique_ptr<RoutedEventArgs> Menu::routedArguments = std::make_unique<RoutedEventArgs>();
 	Menu::Menu(int resourceID)
 		:Menu(resourceID, RECT{})
 	{

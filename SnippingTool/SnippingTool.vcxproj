@@ -77,12 +77,15 @@
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SnippingManager.h" />
+    <ClInclude Include="SnippingWindow.h" />
     <ClInclude Include="ToolBar.h" />
     <ClInclude Include="ToolbarCtrl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ImageCapture.cpp" />
     <ClCompile Include="MainWindow.cpp" />
+    <ClCompile Include="SnippingManager.cpp" />
+    <ClCompile Include="SnippingWindow.cpp" />
     <ClCompile Include="ToolBar.cpp" />
     <ClCompile Include="ToolbarCtrl.cpp" />
     <ClCompile Include="WinMain.cpp" />
@@ -102,7 +105,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Manifest Include="DeclareDPIAware.manifest" />
+    <Manifest Include="DeclareDPIAware.manifest">
+      <SubType>Designer</SubType>
+    </Manifest>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

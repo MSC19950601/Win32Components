@@ -13,6 +13,13 @@ namespace Yupei
 		rect.bottom += static_cast<LONG>(y);
 	}
 
+	template<typename RectType>
+	inline void CorrectRect(RectType& rect)
+	{
+		if (rect.left > rect.right) std::swap(rect.left, rect.right);
+		if (rect.bottom < rect.top) std::swap(rect.top, rect.bottom);
+	}
+
 	inline HINSTANCE GetApplicationInstance() noexcept
 	{
 		return ::GetModuleHandle(nullptr);
@@ -32,4 +39,16 @@ namespace Yupei
 	private:
 
 	};
+
+	template<typename Type,typename RectType>
+	inline Type GetRECTWidth(const RectType& rect)
+	{
+		return static_cast<Type>(rect.right - rect.left);
+	}
+
+	template<typename Type, typename RectType>
+	inline Type GetRECTHeight(const RectType& rect)
+	{
+		return static_cast<Type>(rect.bottom - rect.top);
+	}
 }

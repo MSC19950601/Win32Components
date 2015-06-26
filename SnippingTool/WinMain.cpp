@@ -8,7 +8,7 @@ int WINAPI WinMain(
 	int /* nCmdShow */
 	)
 {
-	auto mainWindow = std::make_shared<MainWindow>();
+	auto mainWindow = MainWindow::GetInstance();
 	mainWindow->Initialize();
 	return Yupei::Application::Run(mainWindow.get());
 }
